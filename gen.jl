@@ -53,7 +53,8 @@ function generate_csp_instance(L::Int, n::Int, min_item_len::Int, max_item_len::
     if min_item_len > L 
         error("❌ Infeasible instance: all item lengths exceed the stock length = $L")
     elseif max_item_len > L
-        @warn "⚠️ Some items may exceed the stock length = $L"
+        @warn "⚠️ The specified maximum item length ($max_item_len) exceeds the stock length ($L). " *
+        "Item lengths will be truncated so that their maximum does not exceed $L."
     end
 
     #----- Generate item lengths (bounded by stock length)
@@ -66,7 +67,7 @@ function generate_csp_instance(L::Int, n::Int, min_item_len::Int, max_item_len::
 
     #----- Build the data frame
 
-    df =  DataFrame(Item = 1:n, Length = item_lengths, Demand = demands)
+    df =  DataFrame(Item = 1:n, Length = item_lengths, Demand = demands, StockLength = fill(L, n))
 
     #----- Save instance
 
