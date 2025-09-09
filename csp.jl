@@ -23,9 +23,9 @@ function parse_commandline()
 
     @add_arg_table s begin
         "--filename", "-f"
-            help = "Path to the CSP instance .csv file"
-            arg_type = String
-            required = true
+        help = "Path to the CSP instance .csv file"
+        arg_type = String
+        required = true
     end
 
     args = parse_args(s)
@@ -66,7 +66,9 @@ end
 function restricted_master_problem(inst::Instance, a::Vector{Vector{Int}})
     #----- Create and solve the model for the restricted master problem 
 
-    RMP = Model(optimizer_with_attributes(Gurobi.Optimizer)) # Create the model
+    RMP = Model(optimizer_with_attributes(Gurobi.Optimizer,
+    "TimeLimit" => 10.0,
+    "OutputFlag" => 0)) 
     P::Int = length(a)
 
     #----- Decision variables 
@@ -85,23 +87,28 @@ function restricted_master_problem(inst::Instance, a::Vector{Vector{Int}})
 
     optimize!(RMP)
 
-    #----- Check the termination status
-    
-    if termination_status(RMP) != MOI.OPTIMAL
-        error("Failed to solve the Restricted Master Problem (RMP)")
+    #----- Check the termination status and extract the duals
+
+    status = termination_status(RMP)
+
+    if status == MOI.OPTIMAL || status == MOI.OPTIMAL_INACCURATE
+        duals = [dual(demand[i]) for i in 1:inst.n]
+    elseif status == MOI.TIME_LIMIT && has_values(RMP)
+        @warn "⏱️ Time limit reached in RMP, using current dual values."
+        duals = [dual(demand[i]) for i in 1:inst.n]
+    else
+        error("❌ Failed to solve the Restricted Master Problem (status = $status)")
     end
-
-    # Extract duals from RMP
-
-    duals = [dual(demand[i]) for i in 1:inst.n]
 
     return duals
 end
 
-function sub_problem(inst::Instance, w::Vector{Float64})
-    #----- Create and solve the model for the sub-problem (knapsack problem)
+function pricing_problem(inst::Instance, w::Vector{Float64})
+    #----- Create and solve the model for the pricing problem (0-1 Knapsack)
 
-    KP = Model(optimizer_with_attributes(Gurobi.Optimizer)) # Create the model
+    KP = Model(optimizer_with_attributes(Gurobi.Optimizer,
+    "TimeLimit" => 60.0,
+    "OutputFlag" => 0)) 
 
     #----- Decision variables
 
@@ -119,14 +126,17 @@ function sub_problem(inst::Instance, w::Vector{Float64})
 
     optimize!(KP)
 
-    #----- Check the termination status and get the objective 
+    #----- Check the termination status and get the objective
 
-    if termination_status(KP) == MOI.OPTIMAL
+    status = termination_status(KP)
+
+    if status == MOI.OPTIMAL
         zIP = objective_value(KP)
-    elseif termination_status(KP) == MOI.TIME_LIMIT && has_values(KP)
+    elseif status == MOI.TIME_LIMIT && has_values(KP)
+        @warn "⏱️ Time limit reached in pricing problem, using current solution."
         zIP = objective_value(KP)
     else
-        error("Failed to solve the sub-problem")
+        error("❌ Failed to solve the pricing problem (knapsack subproblem).")
     end
 
     new_pattern = round.(Int, value.(a))
@@ -194,6 +204,10 @@ function main_csp()
 
     iter::Int = 0
 
+    #----- Set time counter 
+
+    start_time = time()
+
     while true
         #----- Update iteration counter 
 
@@ -205,12 +219,19 @@ function main_csp()
 
         #----- Obtain a new pattern after solving the knapsack sub-problem 
 
-        new_pattern, zIP = sub_problem(inst, w)
+        new_pattern, zIP = pricing_problem(inst, w)
+
+        #----- Compute elapsed time 
+
+        elapsed = time() - start_time
 
         #----- Stop the algorithm if no improving pattern exists
 
         if 1 - zIP >= 0
             @info "No new patterns, terminating the algorithm after $iter iterations."
+            break
+        elseif elapsed >= 600
+            @info "Terminating the search after $iter iterations and $elapsed seconds."
             break
         else
             push!(a, new_pattern)
