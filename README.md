@@ -36,3 +36,13 @@ The solver saves a `.png` file with a bar chart illustrating the generated cutti
 
 ## Requirements 
 
+- Julia 1.11
+- The following Julia packages:
+  - [`JuMP`] - modeling language for mathematical optimization.
+  - [`Gurobi.jl`] — Julia interface to the Gurobi solver.  
+  - [`CSV.jl`] — for reading and writing `.csv` files.  
+  - [`DataFrames.jl`] — for handling tabular data.  
+  - [`ArgParse.jl`] — for parsing command-line arguments.  
+  - [`Plots.jl`] — for visualization.
+
+⚠️ **Note:** You need a working installation of the [Gurobi Optimizer](https://www.gurobi.com/) with a valid license.
