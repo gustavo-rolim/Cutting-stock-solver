@@ -27,7 +27,7 @@ julia gen.jl --L 20 --n 5 --min_item_len 2 --max_item_len 7 --min_demand 1 --max
 
 1. Run the solver by passing the filename as an argument:
 ```bash
-julia csp.jl --instance example.csv
+julia csp.jl --filename example.csv
 ```
 
 ## Output example
