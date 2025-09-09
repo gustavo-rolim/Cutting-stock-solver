@@ -225,13 +225,13 @@ function main_csp()
 
         elapsed = time() - start_time
 
-        #----- Stop the algorithm if no improving pattern exists
+        #----- Stop the algorithm if no improving pattern exists or time limit is reached
 
         if 1 - zIP >= 0
             @info "No new patterns, terminating the algorithm after $iter iterations."
             break
         elseif elapsed >= 600
-            @info "Terminating the search after $iter iterations and $elapsed seconds."
+            @info "Terminating the search after $iter iterations and reaching the time limit."
             break
         else
             push!(a, new_pattern)
