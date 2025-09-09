@@ -36,13 +36,16 @@ end
 function read_instance(filename::String)
     df = CSV.read(filename, DataFrame)
 
-    # Extract L (stock length) from the first row (same for all rows)
+    #----- Extract L (stock length) from the first row (same for all rows)
+
     L = Int(df.StockLength[1])
 
-    # Extract number of items
+    #----- Extract number of items
+
     n = nrow(df)
 
-    # Extract lengths and demands
+    #----- Extract lengths and demands
+    
     I = Vector{Int}(df.Length)
     b = Vector{Int}(df.Demand)
 
